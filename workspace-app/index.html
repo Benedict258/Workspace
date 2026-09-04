@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workspace - Your Task & Schedule Hub</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Handle PWA installation
+      let deferredPrompt;
+      const installButton = document.getElementById('pwa-install-button');
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent the mini-infobar from appearing on mobile
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        deferredPrompt = e;
+        // Update UI to show the install button
+        if (installButton) {
+          installButton.style.display = 'block';
+        }
+      });
+      window.addEventListener('appinstalled', (e) => {
+        // Clear deferredPrompt so it can be garbage collected
+        deferredPrompt = null;
+        // Hide the install button
+        if (installButton) {
+          installButton.style.display = 'none';
+        }
+      });
+    </script>
+  </body>
+</html>
