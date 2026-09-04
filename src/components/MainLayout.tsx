@@ -1,8 +1,10 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useTheme } from 'next-themes'
-import { Plus, Menu, Sun, Moon } from 'lucide-react'
+import { Plus, Menu, Sun, Moon, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import QuickAddModal from '@/components/QuickAddModal'
+import { useAuth } from '@/context/AuthContext'
 
 interface NavItem {
   label: string
@@ -22,7 +24,25 @@ const navItems: NavItem[] = [
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation()
   const { theme, setTheme } = useTheme()
+  const { logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+
+  // Keyboard shortcut: press 'q' to open Quick Add when not typing in an input
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase()
+      if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+        return
+      }
+      if (e.key === 'q' || e.key === 'Q') {
+        e.preventDefault()
+        setQuickAddOpen(true)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   return (
     <div className="flex h-screen bg-background">
@@ -60,9 +80,22 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </nav>
 
           {/* Quick Add */}
-          <button className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-opacity">
+          <button 
+            onClick={() => setQuickAddOpen(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-opacity cursor-pointer shadow-sm"
+          >
             <Plus size={18} />
             Quick Add
+          </button>
+
+          {/* Lock Workspace */}
+          <button
+            onClick={logout}
+            className="flex items-center justify-center gap-2 px-3 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors border border-transparent hover:border-border"
+            title="Lock workspace"
+          >
+            <Lock size={14} />
+            <span>Lock Workspace</span>
           </button>
         </div>
       </aside>
@@ -78,7 +111,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="border-b border-border bg-card p-6 flex items-center justify-between">
+        <header className="border-b border-border bg-card p-4 md:p-6 flex items-center justify-between">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="md:hidden p-2 hover:bg-secondary rounded-lg"
@@ -88,14 +121,26 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
           <div className="flex-1" />
 
-          {/* Theme Toggle */}
-          <button
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-2 hover:bg-secondary rounded-lg transition-colors"
-            aria-label="Toggle theme"
-          >
-            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Theme Toggle */}
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="p-2 hover:bg-secondary rounded-lg transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
+
+            {/* Lock Button */}
+            <button
+              onClick={logout}
+              className="p-2 hover:bg-secondary rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+              aria-label="Lock workspace"
+              title="Lock workspace"
+            >
+              <Lock size={20} />
+            </button>
+          </div>
         </header>
 
         {/* Content Area */}
@@ -103,6 +148,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
       </div>
+
+      {/* Global Quick Add Dialog */}
+      <QuickAddModal 
+        isOpen={quickAddOpen} 
+        onClose={() => setQuickAddOpen(false)} 
+      />
     </div>
   )
 }

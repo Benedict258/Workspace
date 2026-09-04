@@ -10,6 +10,8 @@ import WishlistView from './pages/WishlistView'
 import GoalsView from './pages/GoalsView'
 import SettingsView from './pages/SettingsView'
 import { Toaster } from './components/ui/toaster'
+import { AuthProvider } from './context/AuthContext'
+import PasscodeGate from './components/PasscodeGate'
 
 const queryClient = new QueryClient()
 
@@ -17,18 +19,22 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<TodayView />} />
-            <Route path="/week" element={<WeekView />} />
-            <Route path="/threads" element={<ThreadsView />} />
-            <Route path="/backlog" element={<BacklogView />} />
-            <Route path="/wishlist" element={<WishlistView />} />
-            <Route path="/goals" element={<GoalsView />} />
-            <Route path="/settings" element={<SettingsView />} />
-          </Routes>
-          <Toaster />
-        </BrowserRouter>
+        <AuthProvider>
+          <PasscodeGate>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<TodayView />} />
+                <Route path="/week" element={<WeekView />} />
+                <Route path="/threads" element={<ThreadsView />} />
+                <Route path="/backlog" element={<BacklogView />} />
+                <Route path="/wishlist" element={<WishlistView />} />
+                <Route path="/goals" element={<GoalsView />} />
+                <Route path="/settings" element={<SettingsView />} />
+              </Routes>
+              <Toaster />
+            </BrowserRouter>
+          </PasscodeGate>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   )

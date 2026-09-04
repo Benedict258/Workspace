@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
 import { gridRegenerateSchema } from '@/utils/validation';
 
@@ -33,6 +33,7 @@ export const useWeek = (startDate: string) => {
 // Regenerate week
 export const useRegenerateWeek = () => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: async (startDate: string) => {
@@ -51,9 +52,11 @@ export const useRegenerateWeek = () => {
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['week'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast({
         title: 'Week regenerated',
-        description: 'Week has been successfully regenerated.',
+        description: 'Week schedule has been successfully rebalanced.',
       });
     },
     onError: () => {

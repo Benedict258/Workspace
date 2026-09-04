@@ -1,17 +1,27 @@
 import MainLayout from '@/components/MainLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { format, startOfWeek, addDays } from 'date-fns'
+import { format, startOfWeek, addDays, addWeeks, isSameWeek } from 'date-fns'
 import { useQueries } from '@tanstack/react-query'
-import { useWeek } from '@/hooks/useGrid'
+import { useWeek, useRegenerateWeek } from '@/hooks/useGrid'
 import { useThreads } from '@/hooks/useThreads'
+import { useUpdateTask } from '@/hooks/useTasks'
+import { useState } from 'react'
+import { ChevronLeft, ChevronRight, RefreshCw, CalendarDays, Plus } from 'lucide-react'
+import QuickAddModal from '@/components/QuickAddModal'
 
 export default function WeekView() {
-  const today = new Date()
-  const weekStart = startOfWeek(today, { weekStartsOn: 1 }) // Monday
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => 
+    startOfWeek(new Date(), { weekStartsOn: 1 })
+  )
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
   
-  // Format dates for display
-  const weekStartString = weekStart.toISOString().split('T')[0] // YYYY-MM-DD
+  const isCurrentWeek = isSameWeek(currentWeekStart, new Date(), { weekStartsOn: 1 })
+  const weekStartString = currentWeekStart.toISOString().split('T')[0] // YYYY-MM-DD
+  
+  // Task mutation & Week regeneration
+  const { mutate: updateTask } = useUpdateTask()
+  const { mutate: regenerateWeek, isPending: isRegenerating } = useRegenerateWeek()
   
   // Fetch week data
   const { data: weekData = { week: [] }, isLoading: weekLoading, error: weekError } = useWeek(weekStartString)
@@ -19,6 +29,11 @@ export default function WeekView() {
   
   // Fetch all threads to get thread names
   const { data: threads = [], isLoading: threadsLoading, error: threadsError } = useThreads()
+  
+  // Navigation handlers
+  const handlePrevWeek = () => setCurrentWeekStart(prev => addWeeks(prev, -1))
+  const handleNextWeek = () => setCurrentWeekStart(prev => addWeeks(prev, 1))
+  const handleCurrentWeek = () => setCurrentWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))
   
   // Create a map of threadId -> thread name for easy lookup
   const threadMap = new Map(
@@ -57,7 +72,7 @@ export default function WeekView() {
   // Fetch calendar events for each day in the week
   const calendarQueries = useQueries({
     queries: days.map((_, dayIndex) => {
-      const dayDate = addDays(weekStart, dayIndex)
+      const dayDate = addDays(currentWeekStart, dayIndex)
       return {
         queryKey: ['calendar-events', dayDate.toISOString().split('T')[0]],
         queryFn: async () => {
@@ -83,13 +98,13 @@ export default function WeekView() {
       <MainLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-4xl font-bold mb-2">Week View</h1>
-            <p className="text-lg text-muted-foreground">
-              {format(weekStart, 'MMM d')} — {format(addDays(weekStart, 6), 'MMM d, yyyy')}
+            <h1 className="text-3xl font-bold mb-1">Week View</h1>
+            <p className="text-sm text-muted-foreground">
+              {format(currentWeekStart, 'MMM d')} — {format(addDays(currentWeekStart, 6), 'MMM d, yyyy')}
             </p>
           </div>
           <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading...</p>
+            <p className="text-muted-foreground">Loading week schedule...</p>
           </div>
         </div>
       </MainLayout>
@@ -101,9 +116,9 @@ export default function WeekView() {
       <MainLayout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-4xl font-bold mb-2">Week View</h1>
-            <p className="text-lg text-muted-foreground">
-              {format(weekStart, 'MMM d')} — {format(addDays(weekStart, 6), 'MMM d, yyyy')}
+            <h1 className="text-3xl font-bold mb-1">Week View</h1>
+            <p className="text-sm text-muted-foreground">
+              {format(currentWeekStart, 'MMM d')} — {format(addDays(currentWeekStart, 6), 'MMM d, yyyy')}
             </p>
           </div>
           <div className="text-center py-12">
@@ -117,26 +132,101 @@ export default function WeekView() {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-4xl font-bold mb-2">Week View</h1>
-          <p className="text-lg text-muted-foreground">
-            {format(weekStart, 'MMM d')} — {format(addDays(weekStart, 6), 'MMM d, yyyy')}
-          </p>
+        {/* Header with Navigation Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold tracking-tight">Week View</h1>
+              {isCurrentWeek && (
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                  Current Week
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {format(currentWeekStart, 'MMMM d')} – {format(addDays(currentWeekStart, 6), 'MMMM d, yyyy')}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Week navigation buttons */}
+            <div className="flex items-center rounded-lg border border-border bg-card p-0.5 shadow-sm">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handlePrevWeek} 
+                className="h-8 w-8 p-0" 
+                title="Previous Week"
+              >
+                <ChevronLeft size={16} />
+              </Button>
+              <Button 
+                variant={isCurrentWeek ? "secondary" : "ghost"} 
+                size="sm" 
+                onClick={handleCurrentWeek} 
+                className="h-8 text-xs font-medium px-3"
+              >
+                Today
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleNextWeek} 
+                className="h-8 w-8 p-0" 
+                title="Next Week"
+              >
+                <ChevronRight size={16} />
+              </Button>
+            </div>
+
+            {/* Regenerate schedule */}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => regenerateWeek(weekStartString)} 
+              disabled={isRegenerating}
+              className="gap-1.5 h-9 text-xs"
+              title="Rebalance multi-frequency threads across this week"
+            >
+              <RefreshCw size={14} className={isRegenerating ? "animate-spin" : ""} />
+              <span>{isRegenerating ? "Rebalancing..." : "Regenerate Week"}</span>
+            </Button>
+
+            {/* Quick Add */}
+            <Button 
+              size="sm" 
+              onClick={() => setQuickAddOpen(true)}
+              className="gap-1.5 h-9 text-xs"
+            >
+              <Plus size={14} />
+              <span>Add Task</span>
+            </Button>
+          </div>
         </div>
 
         {/* Weekly Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-7 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
           {days.map((day, dayIndex) => {
             const calendarEvents = (calendarQueries[dayIndex]?.data as any[]) || []
+            const dayDate = addDays(currentWeekStart, dayIndex)
+            const isToday = dayDate.toDateString() === new Date().toDateString()
+
             return (
-              <Card key={day} className="flex flex-col">
-                <CardHeader>
-                  <CardTitle className="text-lg">{day}</CardTitle>
-                  <CardDescription>
-                    {format(addDays(weekStart, dayIndex), 'MMM d')}
+              <Card key={day} className={`flex flex-col ${isToday ? 'ring-2 ring-primary/40' : ''}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-semibold">{day}</CardTitle>
+                    {isToday && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-medium">
+                        Today
+                      </span>
+                    )}
+                  </div>
+                  <CardDescription className="text-xs">
+                    {format(dayDate, 'MMM d')}
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="flex-1 space-y-4">
+                <CardContent className="flex-1 space-y-4 pt-0">
                   {/* Time Blocks */}
                   <div className="space-y-2">
                     {timeBlocks.map((block, timeBlockIndex) => {
@@ -157,7 +247,15 @@ export default function WeekView() {
                                   <input
                                     type="checkbox"
                                     checked={task.status === 'done'}
-                                    onChange={() => {}} 
+                                    onChange={() => {
+                                      updateTask({
+                                        id: task.id,
+                                        updates: {
+                                          status: task.status === 'done' ? 'pending' : 'done',
+                                          completedAt: task.status === 'done' ? null : new Date().toISOString()
+                                        }
+                                      })
+                                    }} 
                                     className="w-4 h-4 rounded cursor-pointer accent-primary"
                                   />
                                   <div className="flex-1 min-w-0">
@@ -221,16 +319,31 @@ export default function WeekView() {
           })}
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-2">
-          <Button>Create New Task</Button>
-          <Button variant="outline" onClick={() => {
-            // TODO: Implement regeneration confirmation
-          }}>
-            Regenerate Week
+        {/* Bottom Actions */}
+        <div className="flex items-center gap-3 pt-2">
+          <Button 
+            onClick={() => setQuickAddOpen(true)}
+            className="gap-2"
+          >
+            <Plus size={16} />
+            <span>Create New Task</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => regenerateWeek(weekStartString)}
+            disabled={isRegenerating}
+            className="gap-2"
+          >
+            <RefreshCw size={14} className={isRegenerating ? "animate-spin" : ""} />
+            <span>{isRegenerating ? "Rebalancing..." : "Regenerate Week Schedule"}</span>
           </Button>
         </div>
       </div>
+
+      <QuickAddModal 
+        isOpen={quickAddOpen} 
+        onClose={() => setQuickAddOpen(false)} 
+      />
     </MainLayout>
   )
 }

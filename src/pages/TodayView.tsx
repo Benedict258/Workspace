@@ -1,20 +1,30 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import MainLayout from '@/components/MainLayout'
-import { Calendar, Clock, CheckCircle2 } from 'lucide-react'
+import { Calendar, Clock, CheckCircle2, Plus, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
-import { useTasks } from '@/hooks/useTasks'
+import { useTasks, useUpdateTask, useCreateTask, useDeleteTask } from '@/hooks/useTasks'
 import { useThreads } from '@/hooks/useThreads'
 import { useCalendarEvents } from '@/hooks/useCalendar'
+import { useState, useRef } from 'react'
 
 export default function TodayView() {
   const today = new Date()
   const todayString = today.toISOString().split('T')[0] // YYYY-MM-DD format
+  const quickInputRef = useRef<HTMLInputElement>(null)
+  const [quickTitle, setQuickTitle] = useState('')
+  const [selectedBlock, setSelectedBlock] = useState('morning')
+  const [selectedThread, setSelectedThread] = useState<string>('')
   
   // Fetch tasks for today
   const { data: tasks = [], isLoading: tasksLoading, error: tasksError } = useTasks({ 
     date: todayString 
   })
+  
+  // Task mutations
+  const { mutate: updateTask } = useUpdateTask()
+  const { mutate: createTask, isPending: isCreatingTask } = useCreateTask()
+  const { mutate: deleteTask } = useDeleteTask()
   
   // Fetch all threads to get thread names
   const { data: threads = [], isLoading: threadsLoading, error: threadsError } = useThreads()
@@ -26,16 +36,52 @@ export default function TodayView() {
   const threadMap = new Map(
     threads.map(thread => [thread._id, thread.name])
   )
+
+  const handleQuickAdd = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!quickTitle.trim()) return
+    createTask({
+      title: quickTitle.trim(),
+      date: todayString,
+      timeBlock: selectedBlock,
+      threadId: selectedThread || null,
+      status: 'pending',
+      source: 'manual'
+    } as any)
+    setQuickTitle('')
+  }
+
+  const handleConvertCalendarEvent = (event: any) => {
+    const startDate = new Date(event.start)
+    const hour = startDate.getHours()
+    let timeBlock = 'afternoon'
+    if (hour < 12) timeBlock = 'morning'
+    else if (hour >= 18) timeBlock = 'evening'
+
+    createTask({
+      title: event.title,
+      date: todayString,
+      timeBlock,
+      threadId: null,
+      status: 'pending',
+      source: 'google-calendar'
+    } as any)
+  }
+
+  const isEventConverted = (eventTitle: string) => {
+    return tasks.some(t => t.title === eventTitle && t.date === todayString)
+  }
   
   // Group tasks by time block
   const timeBlocks = [
     { id: 'morning', label: 'Morning', time: '9:00 AM - 12:00 PM', icon: Calendar },
     { id: 'afternoon', label: 'Afternoon', time: '1:00 PM - 5:00 PM', icon: Clock },
-    { id: 'evening', label: 'Evening', time: '6:00 PM - 9:00 PM', icon: Clock }
+    { id: 'evening', label: 'Evening', time: '6:00 PM - 9:00 PM', icon: Clock },
+    { id: 'unscheduled', label: 'Unscheduled', time: 'Flexible', icon: Clock }
   ].map(block => ({ 
     ...block, 
     tasks: tasks
-      .filter(task => task.timeBlock === block.id)
+      .filter(task => (task.timeBlock || 'unscheduled') === block.id)
       .map(task => ({
         id: task._id,
         title: task.title,
@@ -90,6 +136,45 @@ export default function TodayView() {
           <p className="text-lg text-muted-foreground">{format(today, 'EEEE, MMMM d, yyyy')}</p>
         </div>
 
+        {/* Quick Add Bar */}
+        <Card>
+          <CardContent className="p-4">
+            <form onSubmit={handleQuickAdd} className="flex flex-wrap gap-2 items-center">
+              <input
+                ref={quickInputRef}
+                type="text"
+                value={quickTitle}
+                onChange={(e) => setQuickTitle(e.target.value)}
+                placeholder="Quick-add task for today..."
+                className="flex-1 min-w-[200px] px-3 py-2 border rounded-md text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              <select
+                value={selectedBlock}
+                onChange={(e) => setSelectedBlock(e.target.value)}
+                className="px-3 py-2 border rounded-md text-sm bg-background"
+              >
+                <option value="morning">Morning</option>
+                <option value="afternoon">Afternoon</option>
+                <option value="evening">Evening</option>
+                <option value="unscheduled">Unscheduled</option>
+              </select>
+              <select
+                value={selectedThread}
+                onChange={(e) => setSelectedThread(e.target.value)}
+                className="px-3 py-2 border rounded-md text-sm bg-background max-w-[180px]"
+              >
+                <option value="">One-time (No Thread)</option>
+                {threads.filter(t => t.status === 'active').map(t => (
+                  <option key={t._id} value={t._id}>{t.name}</option>
+                ))}
+              </select>
+              <Button type="submit" size="sm" disabled={!quickTitle.trim() || isCreatingTask}>
+                <Plus size={16} className="mr-1" /> Add
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
         {/* Time Blocks */}  
         {timeBlocks.map((block) => {
           const Icon = block.icon
@@ -114,18 +199,36 @@ export default function TodayView() {
                       <input
                         type="checkbox"
                         checked={task.status === 'done'}
-                        onChange={() => {}} 
+                        onChange={() => {
+                          updateTask({
+                            id: task.id,
+                            updates: {
+                              status: task.status === 'done' ? 'pending' : 'done',
+                              completedAt: task.status === 'done' ? null : new Date().toISOString()
+                            }
+                          })
+                        }} 
                         className="w-5 h-5 rounded cursor-pointer accent-primary"
                       />
-                      <span className={task.status === 'done' ? 'line-through text-muted-foreground' : ''}>
+                      <span className={task.status === 'done' ? 'line-through text-muted-foreground flex-1' : 'flex-1'}>
                         {task.title}
                       </span>
                       {task.threadId && (
-                        <span className="text-xs text-muted-foreground ml-2">
+                        <span className="text-xs text-muted-foreground">
                           [{task.threadName}]
                         </span>
                       )}  
-                      {task.status === 'done' && <CheckCircle2 size={18} className="text-primary ml-auto" />}
+                      {task.status === 'done' && <CheckCircle2 size={18} className="text-primary" />}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          deleteTask(task.id)
+                        }}
+                        className="p-1 text-muted-foreground hover:text-destructive opacity-40 hover:opacity-100 transition-opacity"
+                        title="Delete task"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   )) 
                 ) : (
@@ -143,40 +246,71 @@ export default function TodayView() {
               <Calendar size={20} />
               Today's Events
             </CardTitle>
-            <CardDescription>Events from your Google Calendar</CardDescription>
+            <CardDescription>Events synced from your Google Calendar</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {calendarEvents.length > 0 ? (
               <>
-                {calendarEvents.map((event: any, index: number) => (
-                  <div
-                    key={`event-${index}`}
-                    className="flex items-center gap-2 p-1 rounded bg-secondary hover:bg-secondary/80 transition-colors cursor-pointer mb-1"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium">{event.title}</span>
-                      {event.description && (
-                        <p className="text-xs text-muted-foreground mt-1">{event.description}</p>
+                {calendarEvents.map((event: any, index: number) => {
+                  const alreadyConverted = isEventConverted(event.title)
+                  return (
+                    <div
+                      key={`event-${index}`}
+                      className="flex items-center justify-between gap-3 p-3 rounded-lg bg-secondary/70 hover:bg-secondary transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">{event.title}</span>
+                          {alreadyConverted && (
+                            <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                              <CheckCircle2 size={12} /> Scheduled
+                            </span>
+                          )}
+                        </div>
+                        {event.description && (
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{event.description}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(event.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} – 
+                          {new Date(event.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </p>
+                      </div>
+
+                      {!alreadyConverted && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleConvertCalendarEvent(event)}
+                          className="text-xs h-8 gap-1.5 shrink-0"
+                          title="Convert this calendar event into a checkable workspace task"
+                        >
+                          <Plus size={14} />
+                          Add as Task
+                        </Button>
                       )}
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(event.start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - 
-                        {new Date(event.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                      </p>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </>
             ) : (
-              <p className="text-center py-4 text-muted-foreground">
-                No events today...
+              <p className="text-center py-4 text-sm text-muted-foreground">
+                No external calendar events scheduled for today.
               </p>
             )}
           </CardContent>
         </Card>
 
-        {/* Quick Add Button */}
-        <Button className="w-full" size="lg">
-          Add Task
+        {/* Quick Add Bottom Action */}
+        <Button 
+          className="w-full gap-2" 
+          size="lg"
+          onClick={() => {
+            quickInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            quickInputRef.current?.focus()
+          }}
+        >
+          <Plus size={18} />
+          Add Task for Today
         </Button>
       </div>
     </MainLayout>

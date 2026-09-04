@@ -54,7 +54,8 @@ export const cacheThreads = async (threads: any[]) => {
     store.threads.clear()
     // Add new entries
     for (const thread of threads) {
-      store.threads.put(thread)
+      const normalized = { ...thread, id: thread.id || thread._id, _id: thread._id || thread.id }
+      store.threads.put(normalized)
     }
     await store.done()
   } catch (error) {
@@ -92,7 +93,8 @@ export const cacheTasks = async (tasks: any[]) => {
   try {
     store.tasks.clear()
     for (const task of tasks) {
-      store.tasks.put(task)
+      const normalized = { ...task, id: task.id || task._id, _id: task._id || task.id }
+      store.tasks.put(normalized)
     }
     await store.done()
   } catch (error) {

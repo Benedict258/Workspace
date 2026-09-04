@@ -1,12 +1,14 @@
 import MainLayout from '@/components/MainLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Cloud, Download, Upload } from 'lucide-react'
+import { Cloud, Download, Upload, Lock, ShieldCheck } from 'lucide-react'
 import { useSettings } from '@/hooks/useSettings'
 import { useUpdateSettings } from '@/hooks/useSettings'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/context/AuthContext'
 
 export default function SettingsView() {
+  const { logout } = useAuth()
   const { data: settings, isLoading: settingsLoading, error: settingsError } = useSettings()
   const { 
     mutate: updateSettings, 
@@ -149,6 +151,34 @@ export default function SettingsView() {
         {/* Settings Content */}
         {!settingsLoading && !settingsError && (
           <>
+            {/* Security & Access */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck size={20} className="text-primary" />
+                  Security & Access Control
+                </CardTitle>
+                <CardDescription>Passcode gate protection for your private workspace</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-4 rounded-lg bg-secondary flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      <p className="text-sm font-semibold">Passcode Protection Active</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Access is gated to Benedict Isaac. Sessions remain unlocked on this device until you manually lock.
+                    </p>
+                  </div>
+                  <Button onClick={logout} variant="outline" size="sm" className="gap-2 shrink-0">
+                    <Lock size={15} />
+                    Lock Session Now
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Google Calendar */}
             <Card>
               <CardHeader>
