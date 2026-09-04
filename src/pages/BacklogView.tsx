@@ -1,6 +1,6 @@
 import MainLayout from '@/components/MainLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Edit2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTasks } from '@/hooks/useTasks'
 import { useCreateTask, useUpdateTask, useDeleteTask } from '@/hooks/useTasks'
@@ -17,19 +17,19 @@ export default function BacklogView() {
   
   const { 
     mutate: createTask, 
-    isLoading: isCreating,
+    isPending: isCreating,
     isError: isCreateError,
     error: createError
   } = useCreateTask()
   const { 
     mutate: updateTask, 
-    isLoading: isUpdating,
+    isPending: isUpdating,
     isError: isUpdateError,
     error: updateError
   } = useUpdateTask()
   const { 
     mutate: deleteTask, 
-    isLoading: isDeleting,
+    isPending: isDeleting,
     isError: isDeleteError,
     error: deleteError
   } = useDeleteTask()

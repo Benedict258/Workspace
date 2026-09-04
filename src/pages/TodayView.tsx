@@ -5,7 +5,7 @@ import { Calendar, Clock, CheckCircle2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { useTasks } from '@/hooks/useTasks'
 import { useThreads } from '@/hooks/useThreads'
-import { useCalendar } from '@/hooks/useCalendar'
+import { useCalendarEvents } from '@/hooks/useCalendar'
 
 export default function TodayView() {
   const today = new Date()
@@ -17,10 +17,7 @@ export default function TodayView() {
   })
   
   // Fetch all threads to get thread names
-  const { data: threads = [], isLoading: threadsLoading } = useThreads()
-  
-  // Calendar hook
-  const { useCalendarEvents } = useCalendar()
+  const { data: threads = [], isLoading: threadsLoading, error: threadsError } = useThreads()
   
   // Fetch calendar events for today
   const { data: calendarEvents = [], isLoading: calendarLoading, error: calendarError } = useCalendarEvents(today)
@@ -126,7 +123,7 @@ export default function TodayView() {
                       {task.threadId && (
                         <span className="text-xs text-muted-foreground ml-2">
                           [{task.threadName}]
-                        )
+                        </span>
                       )}  
                       {task.status === 'done' && <CheckCircle2 size={18} className="text-primary ml-auto" />}
                     </div>
@@ -136,8 +133,8 @@ export default function TodayView() {
                 )} 
               </CardContent>
             </Card>
-          )} 
-        }}
+          )
+        })}
 
         {/* Calendar Events Section */}
         <Card>
@@ -151,7 +148,7 @@ export default function TodayView() {
           <CardContent className="space-y-3">
             {calendarEvents.length > 0 ? (
               <>
-                {calendarEvents.map((event, index) => (
+                {calendarEvents.map((event: any, index: number) => (
                   <div
                     key={`event-${index}`}
                     className="flex items-center gap-2 p-1 rounded bg-secondary hover:bg-secondary/80 transition-colors cursor-pointer mb-1"
@@ -166,7 +163,7 @@ export default function TodayView() {
                         {new Date(event.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                       </p>
                     </div>
-                  >
+                  </div>
                 ))}
               </>
             ) : (

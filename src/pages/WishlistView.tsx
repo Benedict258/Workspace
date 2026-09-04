@@ -1,6 +1,6 @@
 import MainLayout from '@/components/MainLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Trash2, CheckCircle2 } from 'lucide-react'
+import { Plus, Trash2, CheckCircle2, Edit2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useWishlist } from '@/hooks/useWishlist'
 import { useCreateWishlistItem, useUpdateWishlistItem, useDeleteWishlistItem } from '@/hooks/useWishlist'
@@ -10,19 +10,19 @@ export default function WishlistView() {
   const { data: wishlist = [], isLoading: wishlistLoading, error: wishlistError } = useWishlist()
   const { 
     mutate: createItem, 
-    isLoading: isCreating,
+    isPending: isCreating,
     isError: isCreateError,
     error: createError
   } = useCreateWishlistItem()
   const { 
     mutate: updateItem, 
-    isLoading: isUpdating,
+    isPending: isUpdating,
     isError: isUpdateError,
     error: updateError
   } = useUpdateWishlistItem()
   const { 
     mutate: deleteItem, 
-    isLoading: isDeleting,
+    isPending: isDeleting,
     isError: isDeleteError,
     error: deleteError
   } = useDeleteWishlistItem()
@@ -101,7 +101,7 @@ export default function WishlistView() {
                   <textarea
                     value={editItemNote}
                     onChange={(e) => setEditItemNote(e.target.value)}
-                    rows="3"
+                    rows={3}
                     className="w-full px-3 py-2 border rounded"
                   />
                 </div>
@@ -110,7 +110,7 @@ export default function WishlistView() {
                   <label className="block text-sm font-medium mb-1">Acquired</label>
                   <input
                     type="checkbox"
-                    value={editItemAcquired}
+                    checked={editItemAcquired}
                     onChange={(e) => setEditItemAcquired(e.target.checked)}
                     className="w-4 h-4 accent-primary"
                   />
@@ -154,7 +154,7 @@ export default function WishlistView() {
         {/* Wishlist Items */}
         {!wishlistLoading && !wishlistError && (
           <div className="space-y-2">
-            {wishlist.map((item) => (
+            {wishlist.map((item: any) => (
               <Card
                 key={item._id}
                 className={`hover:bg-secondary/50 transition-colors ${
@@ -185,7 +185,7 @@ export default function WishlistView() {
                       <Edit2 size={16} />
                     </Button>
                   ) : (
-                    <Item.acquired && <CheckCircle2 size={20} className="text-primary" />}
+                    item.acquired ? <CheckCircle2 size={20} className="text-primary" /> : null
                   )}
                   <Button 
                     size="sm" 

@@ -9,6 +9,7 @@ import BacklogView from './pages/BacklogView'
 import WishlistView from './pages/WishlistView'
 import GoalsView from './pages/GoalsView'
 import SettingsView from './pages/SettingsView'
+import { Toaster } from './components/ui/toaster'
 
 const queryClient = new QueryClient()
 
@@ -26,6 +27,7 @@ function App() {
             <Route path="/goals" element={<GoalsView />} />
             <Route path="/settings" element={<SettingsView />} />
           </Routes>
+          <Toaster />
         </BrowserRouter>
       </ThemeProvider>
     </QueryClientProvider>

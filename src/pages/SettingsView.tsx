@@ -10,7 +10,7 @@ export default function SettingsView() {
   const { data: settings, isLoading: settingsLoading, error: settingsError } = useSettings()
   const { 
     mutate: updateSettings, 
-    isLoading: isUpdating,
+    isPending: isUpdating,
     isError: isUpdateError,
     error: updateError
   } = useUpdateSettings()
@@ -111,15 +111,16 @@ export default function SettingsView() {
 
   // PWA Install handler
   const handleInstall = async () => {
-    if (window.deferredPrompt) {
-      window.deferredPrompt.prompt()
-      const choiceResult = await window.deferredPrompt.userChoice
+    const win = window as any
+    if (win.deferredPrompt) {
+      win.deferredPrompt.prompt()
+      const choiceResult = await win.deferredPrompt.userChoice
       if (choiceResult.outcome === 'accepted') {
         console.log('User accepted the install prompt')
       } else {
         console.log('User dismissed the install prompt')
       }
-      window.deferredPrompt = null
+      win.deferredPrompt = null
     }
   }
 

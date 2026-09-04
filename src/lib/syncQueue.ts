@@ -5,10 +5,10 @@ const DB_VERSION = 1
 const QUEUE_STORE = 'sync-queue'
 
 let db: IDBDatabase | null = null
-let onlineListeners: (() => void)[] = []
+const onlineListeners: (() => void)[] = []
 
 export const initSyncDB = (): Promise<void> => {
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
 
     request.onerror = () => {
@@ -21,9 +21,10 @@ export const initSyncDB = (): Promise<void> => {
     }
 
     request.onupgradeneeded = () => {
-      db = request.result
-      if (!db.objectStoreNames.contains(QUEUE_STORE)) {
-        const store = db.createObjectStore(QUEUE_STORE, { keyPath: 'id', autoIncrement: true })
+      const dbInstance = request.result
+      db = dbInstance
+      if (!dbInstance.objectStoreNames.contains(QUEUE_STORE)) {
+        const store = dbInstance.createObjectStore(QUEUE_STORE, { keyPath: 'id', autoIncrement: true })
         store.createIndex('timestamp', 'timestamp', { unique: false })
       }
     }
@@ -37,7 +38,7 @@ const getQueueStore = (mode: IDBTransactionMode = 'readonly') => {
   const transaction = db.transaction(QUEUE_STORE, mode)
   return {
     store: transaction.objectStore(QUEUE_STORE),
-    done: () => new Promise((resolve, reject) => {
+    done: () => new Promise<void>((resolve, reject) => {
       transaction.oncomplete = () => resolve()
       transaction.onerror = () => reject(transaction.error)
     })
@@ -63,7 +64,7 @@ export const getQueue = async (): Promise<any[]> => {
   const store = getQueueStore()
   try {
     const operations: any[] = []
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       const request = store.store.openCursor()
       request.onsuccess = () => {
         const cursor = request.result
@@ -111,9 +112,11 @@ export const isOnline = (): boolean => {
 
 type OperationHandler = (operation: any) => Promise<any>
 
+const API_URL = import.meta.env.VITE_API_URL || '';
+
 const operationHandlers: Record<string, OperationHandler> = {
   'create': async (operation: any) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}${operation.endpoint}`, {
+    const response = await fetch(`${API_URL}${operation.endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -126,7 +129,7 @@ const operationHandlers: Record<string, OperationHandler> = {
     return response.json()
   },
   'update': async (operation: any) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}${operation.endpoint}/${operation.id}`, {
+    const response = await fetch(`${API_URL}${operation.endpoint}/${operation.id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -139,7 +142,7 @@ const operationHandlers: Record<string, OperationHandler> = {
     return response.json()
   },
   'delete': async (operation: any) => {
-    const response = await fetch(`${import.meta.env.VITE_API_URL}${operation.endpoint}/${operation.id}`, {
+    const response = await fetch(`${API_URL}${operation.endpoint}/${operation.id}`, {
       method: 'DELETE',
     })
     if (!response.ok) {

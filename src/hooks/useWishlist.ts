@@ -12,13 +12,13 @@ export type WishlistItem = {
 };
 
 // API URL
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 // Fetch all wishlist items
 export const useWishlist = () => {
   return useQuery({
     queryKey: ['wishlist'],
-    queryFn: async () {
+    queryFn: async () => {
       const response = await fetch(`${API_URL}/api/wishlist`);
       if (!response.ok) {
         throw new Error('Failed to fetch wishlist items');

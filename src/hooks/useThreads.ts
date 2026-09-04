@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient, useEffect } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { threadSchema } from '@/utils/validation';
 import { initDB, cacheThreads, getCachedThreads, clearCache } from '@/lib/storage';
@@ -18,7 +19,7 @@ export type Thread = {
 };
 
 // API URL
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 // Initialize DB and sync listener once
 let dbInitialized = false;

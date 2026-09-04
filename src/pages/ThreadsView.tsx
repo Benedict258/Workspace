@@ -11,19 +11,19 @@ export default function ThreadsView() {
   const { data: threads = [], isLoading: threadsLoading, error: threadsError } = useThreads()
   const { 
     mutate: createThread, 
-    isLoading: isCreating,
+    isPending: isCreating,
     isError: isCreateError,
     error: createError
   } = useCreateThread()
   const { 
     mutate: updateThread, 
-    isLoading: isUpdating,
+    isPending: isUpdating,
     isError: isUpdateError,
     error: updateError
   } = useUpdateThread()
   const { 
     mutate: deleteThread, 
-    isLoading: isDeleting,
+    isPending: isDeleting,
     isError: isDeleteError,
     error: deleteError
   } = useDeleteThread()
@@ -202,7 +202,7 @@ export default function ThreadsView() {
                   <textarea
                     value={editThreadNotes}
                     onChange={(e) => setEditThreadNotes(e.target.value)}
-                    rows="3"
+                    rows={3}
                     className="w-full px-3 py-2 border rounded"
                   />
                 </div>

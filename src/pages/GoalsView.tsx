@@ -1,6 +1,7 @@
 import MainLayout from '@/components/MainLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { BarChart3, Flame, TrendingUp } from 'lucide-react'
+import { BarChart3, Flame, TrendingUp, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { useGoals } from '@/hooks/useGoals'
 import { useCreateGoal, useUpdateGoal, useDeleteGoal } from '@/hooks/useGoals'
 import { useState } from 'react'
@@ -9,19 +10,19 @@ export default function GoalsView() {
   const { data: goals = [], isLoading: goalsLoading, error: goalsError } = useGoals()
   const { 
     mutate: createGoal, 
-    isLoading: isCreating,
+    isPending: isCreating,
     isError: isCreateError,
     error: createError
   } = useCreateGoal()
   const { 
     mutate: updateGoal, 
-    isLoading: isUpdating,
+    isPending: isUpdating,
     isError: isUpdateError,
     error: updateError
   } = useUpdateGoal()
   const { 
     mutate: deleteGoal, 
-    isLoading: isDeleting,
+    isPending: isDeleting,
     isError: isDeleteError,
     error: deleteError
   } = useDeleteGoal()
@@ -99,7 +100,7 @@ export default function GoalsView() {
                     onChange={(e) => setEditGoalText(e.target.value)}
                     required
                     className="w-full px-3 py-2 border rounded"
-                    rows="3"
+                    rows={3}
                   />
                 </div>
                 
@@ -230,7 +231,7 @@ export default function GoalsView() {
                               onChange={(e) => setEditGoalText(e.target.value)}
                               required
                               className="w-full px-3 py-2 border rounded"
-                              rows="3"
+                              rows={3}
                             />
                           </div>
                           

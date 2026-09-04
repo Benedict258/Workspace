@@ -2,12 +2,12 @@
 
 const DB_NAME = 'workspace-db'
 const DB_VERSION = 1
-const STORES = ['threads', 'tasks', 'goals']
+const STORES = ['threads', 'tasks', 'goals'] as const
 
 let db: IDBDatabase | null = null
 
 export const initDB = (): Promise<void> => {
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
 
     request.onerror = () => {
@@ -20,10 +20,11 @@ export const initDB = (): Promise<void> => {
     }
 
     request.onupgradeneeded = () => {
-      db = request.result
+      const dbInstance = request.result
+      db = dbInstance
       STORES.forEach(storeName => {
-        if (!db.objectStoreNames.contains(storeName)) {
-          db.createObjectStore(storeName, { keyPath: 'id' })
+        if (!dbInstance.objectStoreNames.contains(storeName)) {
+          dbInstance.createObjectStore(storeName, { keyPath: 'id' })
         }
       })
     }
@@ -34,12 +35,12 @@ const getStore = (mode: IDBTransactionMode = 'readonly') => {
   if (!db) {
     throw new Error('Database not initialized')
   }
-  const transaction = db.transaction(STORES, mode)
+  const transaction = db.transaction([...STORES], mode)
   return {
     threads: transaction.objectStore('threads'),
     tasks: transaction.objectStore('tasks'),
     goals: transaction.objectStore('goals'),
-    done: () => new Promise((resolve, reject) => {
+    done: () => new Promise<void>((resolve, reject) => {
       transaction.oncomplete = () => resolve()
       transaction.onerror = () => reject(transaction.error)
     })
@@ -66,7 +67,7 @@ export const getCachedThreads = async (): Promise<any[]> => {
   const store = getStore()
   try {
     const threads: any[] = []
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       const request = store.threads.openCursor()
       request.onsuccess = () => {
         const cursor = request.result
@@ -104,7 +105,7 @@ export const getCachedTasks = async (): Promise<any[]> => {
   const store = getStore()
   try {
     const tasks: any[] = []
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       const request = store.tasks.openCursor()
       request.onsuccess = () => {
         const cursor = request.result
@@ -142,7 +143,7 @@ export const getCachedGoals = async (): Promise<any[]> => {
   const store = getStore()
   try {
     const goals: any[] = []
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       const request = store.goals.openCursor()
       request.onsuccess = () => {
         const cursor = request.result
@@ -165,9 +166,9 @@ export const getCachedGoals = async (): Promise<any[]> => {
 export const clearCache = async () => {
   const store = getStore('readwrite')
   try {
-    for (const storeName of STORES) {
-      store[storeName].clear()
-    }
+    store.threads.clear()
+    store.tasks.clear()
+    store.goals.clear()
     await store.done()
   } catch (error) {
     console.error('Failed to clear cache:', error)

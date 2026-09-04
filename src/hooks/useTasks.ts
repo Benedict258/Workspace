@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient, useEffect } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { taskSchema } from '@/utils/validation';
 import { initDB, cacheTasks, getCachedTasks, clearCache } from '@/lib/storage';
@@ -20,7 +21,7 @@ export type Task = {
 };
 
 // API URL
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 // Initialize DB and sync listener once
 let dbInitialized = false;
@@ -43,7 +44,7 @@ const initialize = async () => {
 // We'll not start/stop the listener in this hook to avoid multiple instances.
 
 // Fetch tasks with optional filters
-export const useTasks = (filters: { date?: string; status?: string; threadId?: string } = {}) => {
+export const useTasks = (filters: { date?: string; status?: string; threadId?: string | null } = {}) => {
   const queryClient = useQueryClient();
   
   // Initialize DB on first call
@@ -77,7 +78,7 @@ export const useTasks = (filters: { date?: string; status?: string; threadId?: s
 };
 
 // Helper to fetch tasks from API
-const fetchTasksFromAPI = async (filters: { date?: string; status?: string; threadId?: string }): Promise<Task[]> => {
+const fetchTasksFromAPI = async (filters: { date?: string; status?: string; threadId?: string | null }): Promise<Task[]> => {
   const queryParams = new URLSearchParams();
   if (filters.date) queryParams.append('date', filters.date);
   if (filters.status) queryParams.append('status', filters.status);
@@ -101,7 +102,7 @@ export const useCreateTask = () => {
   }, []);
 
   return useMutation({
-    mutationFn: async (newTask: Omit<Task, '_id' | 'createdAt' | 'updatedAt'>) => {
+    mutationFn: async (newTask: Partial<Omit<Task, '_id' | 'createdAt' | 'updatedAt'>> & { title: string }) => {
       if (isOnline()) {
         // Online: send to API directly
         const response = await fetch(`${API_URL}/api/tasks`, {

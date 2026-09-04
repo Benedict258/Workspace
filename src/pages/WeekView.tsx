@@ -2,9 +2,9 @@ import MainLayout from '@/components/MainLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { format, startOfWeek, addDays } from 'date-fns'
+import { useQueries } from '@tanstack/react-query'
 import { useWeek } from '@/hooks/useGrid'
 import { useThreads } from '@/hooks/useThreads'
-import { useCalendar } from '@/hooks/useCalendar'
 
 export default function WeekView() {
   const today = new Date()
@@ -18,10 +18,7 @@ export default function WeekView() {
   const tasks = weekData.week || []
   
   // Fetch all threads to get thread names
-  const { data: threads = [], isLoading: threadsLoading } = useThreads()
-  
-  // Calendar hook
-  const { useCalendarEvents } = useCalendar()
+  const { data: threads = [], isLoading: threadsLoading, error: threadsError } = useThreads()
   
   // Create a map of threadId -> thread name for easy lookup
   const threadMap = new Map(
@@ -33,12 +30,12 @@ export default function WeekView() {
   const timeBlocks = ['Morning', 'Afternoon', 'Evening']
   
   // Create a 2D array: [dayIndex][timeBlockIndex] = tasks
-  const tasksByDayAndBlock = Array.from({ length: 7 }, () => 
-    Array.from({ length: 3 }, () => [])
+  const tasksByDayAndBlock: any[][][] = Array.from({ length: 7 }, () => 
+    Array.from({ length: 3 }, () => [] as any[])
   )
   
   // Populate the tasks array
-  tasks.forEach(task => {
+  tasks.forEach((task: any) => {
     const taskDate = new Date(task.date)
     const dayIndex = taskDate.getDay() === 0 ? 6 : taskDate.getDay() - 1 // Convert to Monday=0, Sunday=6
     const timeBlockIndex = timeBlocks.indexOf(
@@ -58,15 +55,28 @@ export default function WeekView() {
   })
   
   // Fetch calendar events for each day in the week
-  const calendarEventsByDay = days.map((day, dayIndex) => {
-    const dayDate = new Date(weekStart)
-    dayDate.setDate(weekStart.getDate() + dayIndex) // Monday + dayIndex
-    return useCalendarEvents(dayDate)
+  const calendarQueries = useQueries({
+    queries: days.map((_, dayIndex) => {
+      const dayDate = addDays(weekStart, dayIndex)
+      return {
+        queryKey: ['calendar-events', dayDate.toISOString().split('T')[0]],
+        queryFn: async () => {
+          try {
+            const response = await fetch(`/api/calendar/events?date=${dayDate.toISOString()}`)
+            if (!response.ok) return []
+            const data = await response.json()
+            return (data.events || []) as any[]
+          } catch {
+            return []
+          }
+        },
+      }
+    }),
   })
   
   // Handle loading and error states
-  const isLoading = weekLoading || threadsLoading || calendarEventsByDay.some(e => e.isLoading)
-  const hasError = weekError || threadsError || calendarEventsByDay.some(e => e.error)
+  const isLoading = weekLoading || threadsLoading || calendarQueries.some(q => q.isLoading)
+  const hasError = weekError || threadsError
   
   if (isLoading) {
     return (
@@ -117,7 +127,7 @@ export default function WeekView() {
         {/* Weekly Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-7 gap-4">
           {days.map((day, dayIndex) => {
-            const calendarEvents = calendarEventsByDay[dayIndex].data || []
+            const calendarEvents = (calendarQueries[dayIndex]?.data as any[]) || []
             return (
               <Card key={day} className="flex flex-col">
                 <CardHeader>
@@ -139,7 +149,7 @@ export default function WeekView() {
                           <p className="font-semibold text-xs text-muted-foreground mb-1">{block}</p>
                           {blockTasks.length > 0 ? (
                             <>
-                              {blockTasks.map((task, index) => (
+                              {blockTasks.map((task: any, index: number) => (
                                 <div
                                   key={`${day}-${block}-${index}`}
                                   className="flex items-center gap-2 p-1 rounded bg-secondary hover:bg-secondary/80 transition-colors cursor-pointer mb-1"
@@ -172,8 +182,9 @@ export default function WeekView() {
                             </p>
                           )}
                         </div>
-                      )}
-                  )}
+                      )
+                    })}
+                  </div>
                   
                   {/* Calendar Events Section */}
                   <div className="mt-4">
@@ -195,7 +206,7 @@ export default function WeekView() {
                                 {new Date(event.end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                               </p>
                             </div>
-                          >
+                          </div>
                         ))}
                       </>
                     ) : (
@@ -206,8 +217,8 @@ export default function WeekView() {
                   </div>
                 </CardContent>
               </Card>
-            )}
-          ))}
+            )
+          })}
         </div>
 
         {/* Actions */}

@@ -14,7 +14,22 @@ export type CalendarEvent = {
 }
 
 // API URL
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const API_URL = import.meta.env.VITE_API_URL || ''
+
+// Pull calendar events for a given date
+export const useCalendarEvents = (date: Date) => {
+  return useQuery({
+    queryKey: ['calendar-events', date.toISOString()],
+    queryFn: async () => {
+      const response = await fetch(`${API_URL}/api/calendar/events?date=${date.toISOString()}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch calendar events')
+      }
+      const data = await response.json()
+      return data.events || []
+    },
+  })
+}
 
 export const useCalendar = () => {
   const { toast } = useToast()
@@ -35,7 +50,7 @@ export const useCalendar = () => {
   // Connect to Google Calendar (initiates OAuth flow)
   const { 
     mutate: connectCalendar, 
-    isLoading: isConnecting,
+    isPending: isConnecting,
     isError: isConnectError,
     error: connectError
   } = useMutation({
@@ -69,7 +84,7 @@ export const useCalendar = () => {
   // Disconnect from Google Calendar
   const { 
     mutate: disconnectCalendar, 
-    isLoading: isDisconnecting,
+    isPending: isDisconnecting,
     isError: isDisconnectError,
     error: disconnectError
   } = useMutation({
@@ -114,7 +129,7 @@ export const useCalendar = () => {
   // Sync calendar (placeholder)
   const { 
     mutate: syncCalendar, 
-    isLoading: isSyncing,
+    isPending: isSyncing,
     isError: isSyncError,
     error: syncError
   } = useMutation({
